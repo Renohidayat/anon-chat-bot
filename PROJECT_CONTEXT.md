@@ -14,23 +14,28 @@ Bot Telegram anonymous chat:
 
 ## Status Saat Ini
 
-- Fase: **Planning** *(update jadi Development/Testing/Production seiring progres)*
-- Terakhir diupdate: *(isi tanggal setiap update)*
+- Fase: **Development — Phase 1+2 (basic matching + media forward)**
+- Terakhir diupdate: 2026-09-23
 
 ## Keputusan Arsitektur yang Sudah Dibuat
 
 - Redis + MongoDB dipilih (bukan Firestore) — alasan: Firestore free tier ada limit read/write harian ketat, kurang cocok untuk bot chat yang write-heavy
 - Media pakai `file_id` Telegram, bukan Firebase Storage — hemat biaya & lebih cepat, storage 100% ditanggung Telegram
 - Payment: RonzzPay (perlu verifikasi legalitas/izin PJP sebelum go production)
+- **Bot framework: Telegraf v4** — middleware pattern, ctx.copyMessage support, aktif maintenance
+- **Matching: FIFO** via Redis LIST (RPUSH/LPOP) — lebih simple dan fair daripada random
+- **Media forward: copyMessage()** — 1 API call cover semua tipe (text, photo, video, sticker, dll)
+- **Dependencies (Phase 1):** telegraf, ioredis, mongodb, dotenv — tanpa Express (ditambah di Phase 3)
+- **MongoDB: native driver** tanpa Mongoose — tidak butuh schema validation layer
 
 ## Yang Belum Diputuskan / TODO
 
-- [ ] Pilih bot framework final: Telegraf vs node-telegram-bot-api
-- [ ] Skema Redis (key pattern untuk queue & status)
-- [ ] Skema MongoDB collections (users, subscriptions, transactions, reports)
-- [ ] Alur webhook RonzzPay → update status premium
-- [ ] Sistem report/block untuk moderasi
-- [ ] Rate limiting anti-spam
+- [x] Pilih bot framework final: Telegraf vs node-telegram-bot-api → **Telegraf v4**
+- [x] Skema Redis (key pattern untuk queue & status) → lihat implementation_plan.md
+- [x] Skema MongoDB collections (users, subscriptions, transactions, reports) → lihat implementation_plan.md
+- [ ] Alur webhook RonzzPay → update status premium (Phase 3)
+- [ ] Sistem report/block untuk moderasi (Phase 5)
+- [ ] Rate limiting anti-spam (Phase 6)
 - [ ] Kebijakan usia minimum & ToS (cek kepatuhan Telegram ToS)
 - [ ] Verifikasi legalitas RonzzPay sebagai PJP
 
