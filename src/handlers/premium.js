@@ -44,13 +44,13 @@ function registerPremiumHandlers(bot) {
         createdAt: new Date(),
       });
 
-      const expiredAt = data.expired_at ? `Kadaluarsa: ${data.expired_at}` : '';
+      const expiredAt = data.expired_at ? `⏳ Berlaku hingga: *${data.expired_at}*` : '';
       const caption =
-        `💳 *Upgrade ke Premium*\n\n` +
-        `Harga: *Rp ${config.PREMIUM_PRICE.toLocaleString('id-ID')}*\n` +
-        `Durasi: *${config.PREMIUM_DURATION_DAYS} hari*\n` +
+        `⭐ *Premium Membership*\n\n` +
+        `🏷️ Harga: *Rp ${config.PREMIUM_PRICE.toLocaleString('id-ID')}*\n` +
+        `📆 Durasi: *${config.PREMIUM_DURATION_DAYS} hari*\n` +
         (expiredAt ? `${expiredAt}\n` : '') +
-        `\nScan QR Code di bawah dengan aplikasi banking/e-wallet.`;
+        `\n📱 _Scan QR Code ini menggunakan M-Banking atau E-Wallet (OVO, GoPay, Dana, dll)._`;
 
       // Kirim QR image dari URL yang RonzzPay berikan
       await ctx.replyWithPhoto(data.qr_image, {
@@ -83,7 +83,7 @@ function registerPremiumHandlers(bot) {
 
       if (data.status === 'success') {
         await processWebhookEvent('transaction.success', { reff_id: reffId, status: 'success' });
-        await ctx.editMessageCaption('✅ Pembayaran dikonfirmasi! Cek pesan di atas.').catch(() => {});
+        await ctx.editMessageCaption('✅ Pembayaran Berhasil! Fitur Premium sudah aktif.').catch(() => {});
       } else if (data.status === 'failed' || data.status === 'expired') {
         await transactions().updateOne({ reffId }, { $set: { status: data.status } });
         await ctx.editMessageCaption(`❌ Transaksi ${data.status}. Ketik /upgrade untuk coba lagi.`).catch(() => {});

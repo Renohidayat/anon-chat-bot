@@ -30,7 +30,7 @@ function registerGenderHandlers(bot) {
       await redis.set(`user:${telegramId}:gender`, gender);
 
       const label = gender === 'm' ? 'Laki-laki 🙍‍♂️' : 'Perempuan 🙍‍♀️';
-      await ctx.editMessageText(`✅ Gender kamu diset ke: *${label}*`, { parse_mode: 'Markdown' });
+      await ctx.editMessageText(`✅ Gender profil disetel ke: *${label}*\n\nKetik /start untuk mulai mencari teman chat.`, { parse_mode: 'Markdown' });
     } catch (err) {
       console.error('/setgender error:', err);
       await ctx.reply('❌ Gagal menyimpan gender. Coba lagi.');
@@ -73,12 +73,12 @@ function registerGenderHandlers(bot) {
     try {
       if (pref === 'any') {
         await redis.del(`user:${telegramId}:pref`);
-        await ctx.editMessageText('🎲 Filter gender dihapus. Kamu akan di-match secara random.');
+        await ctx.editMessageText('🎲 Filter dihapus. Pencarian partner sekarang acak/random.');
       } else {
         await redis.set(`user:${telegramId}:pref`, pref, 'EX', TTL);
         const label = pref === 'm' ? 'Laki-laki 🙍‍♂️' : 'Perempuan 🙍‍♀️';
         await ctx.editMessageText(
-          `✅ Filter diset: hanya cari partner *${label}*.\n\nKetik /start atau /next untuk mulai mencari.`,
+          `✅ Filter aktif: mencari partner *${label}*.\n\nKetik /start atau /next untuk mulai.`,
           { parse_mode: 'Markdown' }
         );
       }
