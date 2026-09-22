@@ -14,7 +14,7 @@ Bot Telegram anonymous chat:
 
 ## Status Saat Ini
 
-- Fase: **Development — Phase 3 (RonzzPay payment integration)**
+- Fase: **Development — Phase 6 (Hardening)**
 - Terakhir diupdate: 2026-09-23
 
 ## Keputusan Arsitektur yang Sudah Dibuat

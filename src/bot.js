@@ -2,6 +2,7 @@ const express = require('express');
 const { Telegraf } = require('telegraf');
 const config = require('./config');
 const { connectMongo } = require('./db/mongo');
+const redis = require('./db/redis');
 const { registerStartHandlers } = require('./handlers/start');
 const { registerChatHandler } = require('./handlers/chat');
 const { registerPremiumHandlers } = require('./handlers/premium');
@@ -9,9 +10,20 @@ const { registerGenderHandlers } = require('./handlers/gender');
 const { registerReportHandlers } = require('./handlers/report');
 const webhookRouter = require('./services/webhook');
 const { setBot } = require('./services/webhook');
+const { rateLimiter } = require('./middleware/rateLimiter');
 
 const bot = new Telegraf(config.BOT_TOKEN);
 
+// Global error handler — jangan expose stack trace ke user
+bot.catch((err, ctx) => {
+  console.error(`Bot error for update ${ctx.updateType}:`, err.message);
+  ctx.reply('❌ Terjadi kesalahan. Coba lagi nanti.').catch(() => {});
+});
+
+// Rate limiter — pasang sebelum semua handler
+bot.use(rateLimiter);
+
+// Handlers (urutan penting: commands sebelum generic message handler)
 registerStartHandlers(bot);
 registerPremiumHandlers(bot);
 registerGenderHandlers(bot);
@@ -22,33 +34,47 @@ async function main() {
   await connectMongo();
   console.log('MongoDB connected');
 
-  // Inject bot instance into webhook handler (untuk kirim notif ke user)
   setBot(bot);
 
   const app = express();
 
   // RonzzPay webhook — WAJIB raw body sebelum json parser
-  // (verifikasi HMAC butuh Buffer, bukan parsed object)
   app.use('/ronzzpay-webhook', webhookRouter);
 
-  // JSON parser untuk route lain (jika ada di masa depan)
+  // JSON parser untuk route lain
   app.use(express.json());
 
   app.get('/health', (_req, res) => res.json({ ok: true }));
 
-  app.listen(config.PORT, () => {
+  // Express error handler — jangan expose internal error ke response
+  app.use((err, _req, res, _next) => {
+    console.error('Express error:', err.message);
+    res.status(500).json({ ok: false });
+  });
+
+  const server = app.listen(config.PORT, () => {
     console.log(`Express listening on port ${config.PORT}`);
   });
 
   console.log('Starting bot (polling mode)...');
   bot.launch();
   console.log('Bot is running');
+
+  // Graceful shutdown
+  async function shutdown(signal) {
+    console.log(`${signal} received, shutting down...`);
+    bot.stop(signal);
+    server.close();
+    await redis.quit();
+    console.log('Shutdown complete');
+    process.exit(0);
+  }
+
+  process.once('SIGINT', () => shutdown('SIGINT'));
+  process.once('SIGTERM', () => shutdown('SIGTERM'));
 }
 
 main().catch((err) => {
   console.error('Failed to start:', err);
   process.exit(1);
 });
-
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
