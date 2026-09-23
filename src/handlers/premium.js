@@ -69,7 +69,7 @@ function registerPremiumHandlers(bot) {
 
     } catch (err) {
       console.error('/upgrade error:', err.message);
-      await ctx.reply('❌ Gagal membuat transaksi. Coba lagi nanti.');
+      await ctx.reply(`❌ Gagal membuat transaksi: ${err.message}`);
     }
   });
 
