@@ -2,44 +2,9 @@ const { Markup } = require('telegraf');
 const { users } = require('../db/mongo');
 const matching = require('../services/matching');
 const { saveLastPartner } = require('./report');
+const redis = require('../db/redis');
 
-/**
- * Generate soal math captcha sederhana.
- * Returns { question, answer, options (4 pilihan acak termasuk jawaban benar) }
- */
-function generateCaptcha() {
-  const ops = [
-    { symbol: '+', fn: (a, b) => a + b },
-    { symbol: '-', fn: (a, b) => a - b },
-    { symbol: '×', fn: (a, b) => a * b },
-  ];
-  const op = ops[Math.floor(Math.random() * ops.length)];
-  let a, b, answer;
-
-  if (op.symbol === '×') {
-    a = Math.floor(Math.random() * 9) + 2; // 2-10
-    b = Math.floor(Math.random() * 9) + 2;
-  } else if (op.symbol === '-') {
-    a = Math.floor(Math.random() * 41) + 10; // 10-50
-    b = Math.floor(Math.random() * a);        // 0 sampai a-1
-  } else {
-    a = Math.floor(Math.random() * 41) + 10;
-    b = Math.floor(Math.random() * 41) + 10;
-  }
-  answer = op.fn(a, b);
-
-  // Generate 3 jawaban salah yang unik
-  const wrongSet = new Set();
-  while (wrongSet.size < 3) {
-    const offset = Math.floor(Math.random() * 11) - 5; // -5 sampai +5
-    const wrong = answer + (offset === 0 ? 6 : offset);
-    if (wrong !== answer && wrong >= 0) wrongSet.add(wrong);
-  }
-
-  // Acak urutan pilihan
-  const options = [answer, ...wrongSet].sort(() => Math.random() - 0.5);
-  return { question: `${a} ${op.symbol} ${b} = ?`, answer, options };
-}
+const { generateCaptcha } = require('../utils/captcha');
 
 function registerStartHandlers(bot) {
   // Captcha callback handler
@@ -55,7 +20,8 @@ function registerStartHandlers(bot) {
         { telegramId },
         { $set: { isVerified: true, updatedAt: new Date() } }
       );
-      await ctx.editMessageText('Verifikasi berhasil! Ketik /start buat mulai.');
+      await redis.del(`ratelimit:blocked:${telegramId}`);
+      await ctx.editMessageText('Verifikasi berhasil! Ketik /start buat mulai mencari partner.');
     } else {
       // Salah, kasih soal baru
       const cap = generateCaptcha();
@@ -80,7 +46,7 @@ function registerStartHandlers(bot) {
       const user = await users().findOneAndUpdate(
         { telegramId },
         {
-          $setOnInsert: { telegramId, gender: null, age: null, isPremium: false, premiumExpiry: null, isBanned: false, isVerified: false, createdAt: new Date() },
+          $setOnInsert: { telegramId, gender: null, age: null, isPremium: false, premiumExpiry: null, isBanned: false, isVerified: true, createdAt: new Date() },
           $set: { updatedAt: new Date() },
         },
         { upsert: true, returnDocument: 'after' },
@@ -91,14 +57,14 @@ function registerStartHandlers(bot) {
         return ctx.reply('Akun kamu diblokir karena melanggar aturan. Hubungi admin kalau merasa ini salah.');
       }
 
-      // Captcha untuk user baru
+      // Captcha untuk user yang terkena penalti spam
       if (!user?.isVerified) {
         const cap = generateCaptcha();
         const buttons = cap.options.map(opt =>
           Markup.button.callback(String(opt), `captcha:${cap.answer}:${opt}`)
         );
         return ctx.reply(
-          `Sebelum mulai, jawab dulu buat buktiin kamu bukan bot.\n\n*${cap.question}*`,
+          `Sistem mendeteksi aktivitas spam. Jawab dulu buat buktiin kamu bukan bot.\n\n*${cap.question}*`,
           {
             parse_mode: 'Markdown',
             ...Markup.inlineKeyboard([buttons]),
@@ -117,25 +83,40 @@ function registerStartHandlers(bot) {
         );
       }
 
-      const status = await matching.getStatus(telegramId);
-      if (status === 'waiting') return ctx.reply('Masih nyari nih, tunggu bentar ya..');
-      if (status === 'chatting') return ctx.reply('Kamu lagi ngobrol. Ketik /next buat ganti partner, /stop buat selesai.');
-
-      const partnerId = await matching.findAndPair(telegramId);
-
-      if (partnerId) {
-        const msg = 'Ketemu! Langsung aja sapa duluan 👋\nKetik /next kalau mau ganti, /stop kalau mau berhenti.';
-        await ctx.reply(msg);
-        await ctx.telegram.sendMessage(partnerId, msg);
-      } else {
-        await matching.enqueue(telegramId);
-        await ctx.reply('Lagi nyari temen ngobrol, tunggu bentar ya..');
-      }
+      await handleStartSearch(ctx, telegramId);
     } catch (err) {
       console.error('/start error:', err);
       await ctx.reply('Waduh, ada gangguan. Coba lagi ya.');
     }
   });
+
+  bot.action('start_search', async (ctx) => {
+    await ctx.answerCbQuery().catch(() => {});
+    const telegramId = ctx.from.id;
+    try {
+      await handleStartSearch(ctx, telegramId);
+    } catch (err) {
+      console.error('start_search error:', err);
+      await ctx.reply('Waduh, ada gangguan. Coba lagi ya.');
+    }
+  });
+
+  async function handleStartSearch(ctx, telegramId) {
+    const status = await matching.getStatus(telegramId);
+    if (status === 'waiting') return ctx.reply('Masih nyari nih, tunggu bentar ya..');
+    if (status === 'chatting') return ctx.reply('Kamu lagi ngobrol. Ketik /next buat ganti partner, /stop buat selesai.');
+
+    const partnerId = await matching.findAndPair(telegramId);
+
+    if (partnerId) {
+      const msg = 'Ketemu! Langsung aja sapa duluan 👋\nKetik /next kalau mau ganti, /stop kalau mau berhenti.';
+      await ctx.reply(msg);
+      await ctx.telegram.sendMessage(partnerId, msg);
+    } else {
+      await matching.enqueue(telegramId);
+      await ctx.reply('Lagi nyari temen ngobrol, tunggu bentar ya..');
+    }
+  }
 
   bot.command('stop', async (ctx) => {
     const telegramId = ctx.from.id;

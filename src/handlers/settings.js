@@ -80,7 +80,12 @@ function registerSettingsHandlers(bot) {
         { telegramId },
         { $set: { age, updatedAt: new Date() } }
       );
-      await ctx.reply(`Umur kamu disimpan: *${age} tahun*.`, { parse_mode: 'Markdown' });
+      await ctx.reply(`Umur kamu disimpan: *${age} tahun*.\n\nSemua profil sudah lengkap!`, { 
+        parse_mode: 'Markdown',
+        ...Markup.inlineKeyboard([
+          [Markup.button.callback('Cari Partner 🔍', 'start_search')]
+        ])
+      });
     } catch (err) {
       console.error('set age error:', err);
       await ctx.reply('Gagal simpan umur. Coba lagi.');
