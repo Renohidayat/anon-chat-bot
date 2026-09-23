@@ -24,4 +24,5 @@ module.exports = {
   RONZZPAY_API_KEY: process.env.RONZZPAY_API_KEY || '',
   RONZZPAY_BASE_URL: process.env.RONZZPAY_BASE_URL || 'https://pg.ronzzyt.id',
   RONZZPAY_WEBHOOK_URL: process.env.RONZZPAY_WEBHOOK_URL || '',
+  PAYMENT_MODE: process.env.PAYMENT_MODE || 'sandbox',
 };
