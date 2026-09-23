@@ -5,6 +5,7 @@ const { connectMongo } = require('./db/mongo');
 const { registerStartHandlers } = require('./handlers/start');
 const { registerChatHandler } = require('./handlers/chat');
 const { registerPremiumHandlers } = require('./handlers/premium');
+const { registerGenderHandlers } = require('./handlers/gender');
 const webhookRouter = require('./services/webhook');
 const { setBot } = require('./services/webhook');
 
@@ -12,6 +13,7 @@ const bot = new Telegraf(config.BOT_TOKEN);
 
 registerStartHandlers(bot);
 registerPremiumHandlers(bot);
+registerGenderHandlers(bot);
 registerChatHandler(bot);
 
 async function main() {
