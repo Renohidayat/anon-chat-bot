@@ -75,7 +75,6 @@ function registerPremiumHandlers(bot) {
 
   // Callback: user klik "Saya sudah bayar" — manual cek status
   bot.action(/^check_payment:(.+)$/, async (ctx) => {
-    await ctx.answerCbQuery('Mengecek status pembayaran...');
     const reffId = ctx.match[1];
 
     try {
@@ -83,16 +82,19 @@ function registerPremiumHandlers(bot) {
 
       if (data.status === 'success') {
         await processWebhookEvent('transaction.success', { reff_id: reffId, status: 'success' });
+        await ctx.answerCbQuery('Berhasil!');
         await ctx.editMessageCaption('✅ Pembayaran Berhasil! Fitur Premium sudah aktif.').catch(() => {});
       } else if (data.status === 'failed' || data.status === 'expired') {
         await transactions().updateOne({ reffId }, { $set: { status: data.status } });
+        await ctx.answerCbQuery('Gagal/Expired');
         await ctx.editMessageCaption(`❌ Transaksi ${data.status}. Ketik /upgrade untuk coba lagi.`).catch(() => {});
       } else {
-        await ctx.answerCbQuery('⏳ Pembayaran belum dikonfirmasi. Tunggu sebentar lagi.');
+        // Status masih pending
+        await ctx.answerCbQuery('⏳ Belum terbayar. Cek kembali nanti.', { show_alert: true });
       }
     } catch (err) {
       console.error('check_payment error:', err.message);
-      await ctx.answerCbQuery('❌ Gagal cek status. Coba lagi.');
+      await ctx.answerCbQuery('❌ Gagal mengecek status ke server. Coba lagi.', { show_alert: true });
     }
   });
 
