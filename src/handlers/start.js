@@ -1,5 +1,6 @@
 const { users } = require('../db/mongo');
 const matching = require('../services/matching');
+const { saveLastPartner } = require('./report');
 
 function registerStartHandlers(bot) {
   bot.command('start', async (ctx) => {
@@ -7,14 +8,19 @@ function registerStartHandlers(bot) {
 
     try {
       // Upsert user in MongoDB
-      await users().updateOne(
+      const user = await users().findOneAndUpdate(
         { telegramId },
         {
-          $setOnInsert: { telegramId, gender: null, isPremium: false, premiumExpiry: null, createdAt: new Date() },
+          $setOnInsert: { telegramId, gender: null, isPremium: false, premiumExpiry: null, isBanned: false, createdAt: new Date() },
           $set: { updatedAt: new Date() },
         },
-        { upsert: true },
+        { upsert: true, returnDocument: 'after' },
       );
+
+      // Cek ban
+      if (user?.isBanned) {
+        return ctx.reply('⛔ Akun kamu telah diblokir karena melanggar aturan.');
+      }
 
       const status = await matching.getStatus(telegramId);
       if (status === 'waiting') return ctx.reply('⏳ Kamu sudah di antrian. Tunggu partner ya...');
@@ -49,6 +55,7 @@ function registerStartHandlers(bot) {
 
       if (status === 'chatting') {
         const partnerId = await matching.unpair(telegramId);
+        await saveLastPartner(telegramId, partnerId);
         await ctx.reply('👋 Sesi chat berakhir.');
         if (partnerId) {
           await ctx.telegram.sendMessage(partnerId, '👋 Partner meninggalkan chat. Ketik /start untuk mencari partner baru.');
@@ -71,6 +78,7 @@ function registerStartHandlers(bot) {
 
       if (status === 'chatting') {
         const oldPartnerId = await matching.unpair(telegramId);
+        await saveLastPartner(telegramId, oldPartnerId);
         if (oldPartnerId) {
           await ctx.telegram.sendMessage(oldPartnerId, '👋 Partner meninggalkan chat. Ketik /start untuk mencari partner baru.');
         }
