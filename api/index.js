@@ -37,8 +37,8 @@ app.use(async (req, res, next) => {
     await connectMongo();
     next();
   } catch (err) {
-    console.error('Failed to connect to MongoDB in Serverless:', err);
-    res.status(500).send('Database Error');
+    console.error('Failed to connect to MongoDB in Serverless:', err.message, err.stack);
+    res.status(500).json({ error: 'Database Error', message: err.message });
   }
 });
 
