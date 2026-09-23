@@ -38,7 +38,8 @@ async function createQrisTransaction(amount, description, webhookUrl) {
   if (description) payload.description = description;
   if (webhookUrl) payload.webhook_url = webhookUrl;
 
-  const res = await api.post('/sandbox/transaction/create', payload);
+  const endpoint = config.PAYMENT_MODE === 'production' ? '/transaction/create' : '/sandbox/transaction/create';
+  const res = await api.post(endpoint, payload);
   if (!res.data.status) throw new Error(res.data.message || 'create transaction failed');
   return res.data.data;
 }
@@ -48,7 +49,8 @@ async function createQrisTransaction(amount, description, webhookUrl) {
  * Returns: { reff_id, status, ... }
  */
 async function getTransactionStatus(reffId) {
-  const res = await api.post('/sandbox/transaction/status', {
+  const endpoint = config.PAYMENT_MODE === 'production' ? '/transaction/status' : '/sandbox/transaction/status';
+  const res = await api.post(endpoint, {
     api_key: config.RONZZPAY_API_KEY,
     reff_id: reffId,
   });

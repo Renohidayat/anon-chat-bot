@@ -2,9 +2,12 @@ const { MongoClient } = require('mongodb');
 const config = require('../config');
 
 let db;
+let client;
 
 async function connectMongo() {
-  const client = new MongoClient(config.MONGODB_URI);
+  if (db) return db; // Cache hit untuk Vercel Serverless
+
+  client = new MongoClient(config.MONGODB_URI);
   await client.connect();
   db = client.db();
 
