@@ -8,6 +8,8 @@ const { registerChatHandler } = require('./handlers/chat');
 const { registerPremiumHandlers } = require('./handlers/premium');
 const { registerGenderHandlers } = require('./handlers/gender');
 const { registerReportHandlers } = require('./handlers/report');
+const { registerInfoHandlers } = require('./handlers/info');
+const { registerSettingsHandlers } = require('./handlers/settings');
 const webhookRouter = require('./services/webhook');
 const { setBot } = require('./services/webhook');
 const { rateLimiter } = require('./middleware/rateLimiter');
@@ -17,7 +19,7 @@ const bot = new Telegraf(config.BOT_TOKEN);
 // Global error handler — jangan expose stack trace ke user
 bot.catch((err, ctx) => {
   console.error(`Bot error for update ${ctx.updateType}:`, err.message);
-  ctx.reply('❌ Terjadi kesalahan. Coba lagi nanti.').catch(() => {});
+  ctx.reply('Ada gangguan. Coba lagi ya.').catch(() => {});
 });
 
 // Rate limiter — pasang sebelum semua handler
@@ -25,6 +27,8 @@ bot.use(rateLimiter);
 
 // Handlers (urutan penting: commands sebelum generic message handler)
 registerStartHandlers(bot);
+registerInfoHandlers(bot);
+registerSettingsHandlers(bot);
 registerPremiumHandlers(bot);
 registerGenderHandlers(bot);
 registerReportHandlers(bot);
@@ -58,13 +62,16 @@ async function main() {
 
   // Set menu commands di Telegram
   await bot.telegram.setMyCommands([
-    { command: 'start', description: 'Cari partner / Masuk antrean' },
-    { command: 'stop', description: 'Akhiri sesi chat / Keluar antrean' },
-    { command: 'next', description: 'Ganti partner baru' },
-    { command: 'setgender', description: 'Atur gender kamu' },
-    { command: 'filtergender', description: 'Atur gender partner (Premium)' },
-    { command: 'upgrade', description: 'Berlangganan Premium' },
-    { command: 'report', description: 'Laporkan partner (Spam/Toxic)' },
+    { command: 'start', description: 'Cari temen ngobrol' },
+    { command: 'stop', description: 'Berhenti / keluar antrean' },
+    { command: 'next', description: 'Ganti partner' },
+    { command: 'settings', description: 'Lihat & edit profil' },
+    { command: 'setgender', description: 'Ubah gender' },
+    { command: 'filtergender', description: 'Pilih gender partner (Premium)' },
+    { command: 'upgrade', description: 'Langganan Premium' },
+    { command: 'report', description: 'Laporkan partner' },
+    { command: 'rules', description: 'Aturan chat' },
+    { command: 'help', description: 'Bantuan' },
   ]);
 
   console.log('Starting bot (polling mode)...');

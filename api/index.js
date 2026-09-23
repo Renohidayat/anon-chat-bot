@@ -7,6 +7,8 @@ const { registerChatHandler } = require('../src/handlers/chat');
 const { registerPremiumHandlers } = require('../src/handlers/premium');
 const { registerGenderHandlers } = require('../src/handlers/gender');
 const { registerReportHandlers } = require('../src/handlers/report');
+const { registerInfoHandlers } = require('../src/handlers/info');
+const { registerSettingsHandlers } = require('../src/handlers/settings');
 const webhookRouter = require('../src/services/webhook');
 const { setBot } = require('../src/services/webhook');
 const { rateLimiter } = require('../src/middleware/rateLimiter');
@@ -22,6 +24,8 @@ bot.catch((err, ctx) => {
 bot.use(rateLimiter);
 
 registerStartHandlers(bot);
+registerInfoHandlers(bot);
+registerSettingsHandlers(bot);
 registerPremiumHandlers(bot);
 registerGenderHandlers(bot);
 registerReportHandlers(bot);

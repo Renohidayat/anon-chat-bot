@@ -12,7 +12,7 @@ function registerPremiumHandlers(bot) {
   // /upgrade — mulai flow pembayaran
   bot.command('upgrade', async (ctx) => {
     if (!config.RONZZPAY_API_KEY) {
-      return ctx.reply('❌ Fitur premium belum tersedia. Coba lagi nanti.');
+      return ctx.reply('Fitur premium belum tersedia saat ini.');
     }
 
     const telegramId = ctx.from.id;
@@ -22,10 +22,10 @@ function registerPremiumHandlers(bot) {
       const user = await users().findOne({ telegramId });
       if (user?.isPremium && user?.premiumExpiry > new Date()) {
         const until = user.premiumExpiry.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
-        return ctx.reply(`✅ Kamu sudah premium sampai *${until}*!`, { parse_mode: 'Markdown' });
+        return ctx.reply(`Kamu udah Premium sampai *${until}*.`, { parse_mode: 'Markdown' });
       }
 
-      await ctx.reply('⏳ Membuat transaksi QRIS...');
+      await ctx.reply('Bentar, lagi bikin QRIS...');
 
       const webhookUrl = config.RONZZPAY_WEBHOOK_URL ? `${config.RONZZPAY_WEBHOOK_URL}/ronzzpay-webhook` : '';
       const data = await createQrisTransaction(
@@ -44,21 +44,21 @@ function registerPremiumHandlers(bot) {
         createdAt: new Date(),
       });
 
-      const expiredAt = data.expired_at ? `⏳ Berlaku hingga: *${data.expired_at}*` : '';
+      const expiredAt = data.expired_at ? `Berlaku sampai: *${data.expired_at}*` : '';
       const caption =
-        `⭐ *Premium Membership*\n\n` +
-        `🏷️ Harga: *Rp ${config.PREMIUM_PRICE.toLocaleString('id-ID')}*\n` +
-        `📆 Durasi: *${config.PREMIUM_DURATION_DAYS} hari*\n` +
+        `*Premium*\n\n` +
+        `Harga: *Rp ${config.PREMIUM_PRICE.toLocaleString('id-ID')}*\n` +
+        `Durasi: *${config.PREMIUM_DURATION_DAYS} hari*\n` +
         (expiredAt ? `${expiredAt}\n` : '') +
-        `\n📱 _Scan QR Code ini menggunakan M-Banking atau E-Wallet (OVO, GoPay, Dana, dll)._`;
+        `\nScan QR ini pake M-Banking atau E-Wallet (OVO, GoPay, Dana, dll).`;
 
       // Kirim QR image dari URL yang RonzzPay berikan
       await ctx.replyWithPhoto(data.qr_image, {
         caption,
         parse_mode: 'Markdown',
         ...Markup.inlineKeyboard([
-          [Markup.button.callback('✅ Saya sudah bayar', `check_payment:${data.reff_id}`)],
-          [Markup.button.callback('❌ Batal', 'cancel_payment')],
+          [Markup.button.callback('Sudah bayar', `check_payment:${data.reff_id}`)],
+          [Markup.button.callback('Batal', 'cancel_payment')],
         ]),
       });
 
@@ -69,11 +69,11 @@ function registerPremiumHandlers(bot) {
 
     } catch (err) {
       console.error('/upgrade error:', err.message);
-      await ctx.reply(`❌ Gagal membuat transaksi: ${err.message}`);
+      await ctx.reply(`Gagal bikin transaksi: ${err.message}`);
     }
   });
 
-  // Callback: user klik "Saya sudah bayar" — manual cek status
+  // Callback: user klik "Sudah bayar" — manual cek status
   bot.action(/^check_payment:(.+)$/, async (ctx) => {
     const reffId = ctx.match[1];
 
@@ -83,25 +83,25 @@ function registerPremiumHandlers(bot) {
       if (data.status === 'success') {
         await processWebhookEvent('transaction.success', { reff_id: reffId, status: 'success' });
         await ctx.answerCbQuery('Berhasil!');
-        await ctx.editMessageCaption('✅ Pembayaran Berhasil! Fitur Premium sudah aktif.').catch(() => {});
+        await ctx.editMessageCaption('Pembayaran berhasil! Premium kamu udah aktif.').catch(() => {});
       } else if (data.status === 'failed' || data.status === 'expired') {
         await transactions().updateOne({ reffId }, { $set: { status: data.status } });
         await ctx.answerCbQuery('Gagal/Expired');
-        await ctx.editMessageCaption(`❌ Transaksi ${data.status}. Ketik /upgrade untuk coba lagi.`).catch(() => {});
+        await ctx.editMessageCaption(`Transaksi ${data.status}. Ketik /upgrade buat coba lagi.`).catch(() => {});
       } else {
         // Status masih pending
-        await ctx.answerCbQuery('⏳ Belum terbayar. Cek kembali nanti.', { show_alert: true });
+        await ctx.answerCbQuery('Belum terbayar. Cek lagi nanti.', { show_alert: true });
       }
     } catch (err) {
       console.error('check_payment error:', err.message);
-      await ctx.answerCbQuery('❌ Gagal mengecek status ke server. Coba lagi.', { show_alert: true });
+      await ctx.answerCbQuery('Gagal cek status. Coba lagi.', { show_alert: true });
     }
   });
 
   // Callback: user klik "Batal"
   bot.action('cancel_payment', async (ctx) => {
     await ctx.answerCbQuery('Dibatalkan.');
-    await ctx.editMessageCaption('❌ Transaksi dibatalkan.').catch(() => {});
+    await ctx.editMessageCaption('Transaksi dibatalkan.').catch(() => {});
   });
 }
 
@@ -120,7 +120,7 @@ function startFallbackPolling(bot, telegramId, reffId) {
     if (attempts > POLL_MAX_ATTEMPTS) {
       clearInterval(timer);
       await transactions().updateOne({ reffId }, { $set: { status: 'expired' } });
-      await bot.telegram.sendMessage(telegramId, '⏰ Waktu pembayaran habis. Ketik /upgrade untuk coba lagi.').catch(() => {});
+      await bot.telegram.sendMessage(telegramId, 'Waktu pembayaran habis. Ketik /upgrade buat coba lagi.').catch(() => {});
       return;
     }
 
@@ -132,7 +132,7 @@ function startFallbackPolling(bot, telegramId, reffId) {
       } else if (data.status === 'failed' || data.status === 'expired') {
         clearInterval(timer);
         await transactions().updateOne({ reffId }, { $set: { status: data.status } });
-        await bot.telegram.sendMessage(telegramId, `❌ Transaksi ${data.status}. Ketik /upgrade untuk coba lagi.`).catch(() => {});
+        await bot.telegram.sendMessage(telegramId, `Transaksi ${data.status}. Ketik /upgrade buat coba lagi.`).catch(() => {});
       }
     } catch (err) {
       console.error('Fallback polling error:', err.message);

@@ -34,7 +34,7 @@ function registerChatHandler(bot) {
       const partnerId = await matching.getPartner(telegramId);
 
       if (!partnerId) {
-        return ctx.reply('Belum ada obrolan aktif 💬\nKetik /start untuk mencari partner.');
+        return ctx.reply('Kamu belum ngobrol sama siapa-siapa. Ketik /start buat cari partner.');
       }
 
       // Cek expiry premium secara lazy (max 1x per jam, tidak blocking)
@@ -47,10 +47,10 @@ function registerChatHandler(bot) {
       if (err.code === 403) {
         // Partner blocked the bot
         await matching.unpair(telegramId);
-        return ctx.reply('❌ Partner terputus (memblokir bot). Ketik /start untuk mencari teman baru.');
+        return ctx.reply('Partner kamu kayaknya udah block bot ini. Ketik /start buat cari temen baru.');
       }
       console.error('Forward error:', err);
-      await ctx.reply('❌ Gagal mengirim pesan. Coba lagi.');
+      await ctx.reply('Gagal kirim pesan. Coba lagi.');
     }
   });
 }
