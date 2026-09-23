@@ -3,7 +3,75 @@ const { users } = require('../db/mongo');
 const matching = require('../services/matching');
 const { saveLastPartner } = require('./report');
 
+/**
+ * Generate soal math captcha sederhana.
+ * Returns { question, answer, options (4 pilihan acak termasuk jawaban benar) }
+ */
+function generateCaptcha() {
+  const ops = [
+    { symbol: '+', fn: (a, b) => a + b },
+    { symbol: '-', fn: (a, b) => a - b },
+    { symbol: '×', fn: (a, b) => a * b },
+  ];
+  const op = ops[Math.floor(Math.random() * ops.length)];
+  let a, b, answer;
+
+  if (op.symbol === '×') {
+    a = Math.floor(Math.random() * 9) + 2; // 2-10
+    b = Math.floor(Math.random() * 9) + 2;
+  } else if (op.symbol === '-') {
+    a = Math.floor(Math.random() * 41) + 10; // 10-50
+    b = Math.floor(Math.random() * a);        // 0 sampai a-1
+  } else {
+    a = Math.floor(Math.random() * 41) + 10;
+    b = Math.floor(Math.random() * 41) + 10;
+  }
+  answer = op.fn(a, b);
+
+  // Generate 3 jawaban salah yang unik
+  const wrongSet = new Set();
+  while (wrongSet.size < 3) {
+    const offset = Math.floor(Math.random() * 11) - 5; // -5 sampai +5
+    const wrong = answer + (offset === 0 ? 6 : offset);
+    if (wrong !== answer && wrong >= 0) wrongSet.add(wrong);
+  }
+
+  // Acak urutan pilihan
+  const options = [answer, ...wrongSet].sort(() => Math.random() - 0.5);
+  return { question: `${a} ${op.symbol} ${b} = ?`, answer, options };
+}
+
 function registerStartHandlers(bot) {
+  // Captcha callback handler
+  bot.action(/^captcha:(\d+):(-?\d+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    const expectedAnswer = parseInt(ctx.match[1], 10);
+    const userAnswer = parseInt(ctx.match[2], 10);
+    const telegramId = ctx.from.id;
+
+    if (userAnswer === expectedAnswer) {
+      // Verifikasi berhasil
+      await users().updateOne(
+        { telegramId },
+        { $set: { isVerified: true, updatedAt: new Date() } }
+      );
+      await ctx.editMessageText('Verifikasi berhasil! Ketik /start buat mulai.');
+    } else {
+      // Salah, kasih soal baru
+      const cap = generateCaptcha();
+      const buttons = cap.options.map(opt =>
+        Markup.button.callback(String(opt), `captcha:${cap.answer}:${opt}`)
+      );
+      await ctx.editMessageText(
+        `Salah, coba lagi.\n\n*${cap.question}*`,
+        {
+          parse_mode: 'Markdown',
+          ...Markup.inlineKeyboard([buttons]),
+        }
+      );
+    }
+  });
+
   bot.command('start', async (ctx) => {
     const telegramId = ctx.from.id;
 
@@ -21,6 +89,21 @@ function registerStartHandlers(bot) {
       // Cek ban
       if (user?.isBanned) {
         return ctx.reply('Akun kamu diblokir karena melanggar aturan. Hubungi admin kalau merasa ini salah.');
+      }
+
+      // Captcha untuk user baru
+      if (!user?.isVerified) {
+        const cap = generateCaptcha();
+        const buttons = cap.options.map(opt =>
+          Markup.button.callback(String(opt), `captcha:${cap.answer}:${opt}`)
+        );
+        return ctx.reply(
+          `Sebelum mulai, jawab dulu buat buktiin kamu bukan bot.\n\n*${cap.question}*`,
+          {
+            parse_mode: 'Markdown',
+            ...Markup.inlineKeyboard([buttons]),
+          }
+        );
       }
 
       // Onboarding: Wajib pilih gender
