@@ -56,6 +56,17 @@ async function main() {
     console.log(`Express listening on port ${config.PORT}`);
   });
 
+  // Set menu commands di Telegram
+  await bot.telegram.setMyCommands([
+    { command: 'start', description: 'Cari partner / Masuk antrean' },
+    { command: 'stop', description: 'Akhiri sesi chat / Keluar antrean' },
+    { command: 'next', description: 'Ganti partner baru' },
+    { command: 'setgender', description: 'Atur gender kamu' },
+    { command: 'filtergender', description: 'Atur gender partner (Premium)' },
+    { command: 'upgrade', description: 'Berlangganan Premium' },
+    { command: 'report', description: 'Laporkan partner (Spam/Toxic)' },
+  ]);
+
   console.log('Starting bot (polling mode)...');
   bot.launch();
   console.log('Bot is running');
