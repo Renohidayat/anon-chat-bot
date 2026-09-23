@@ -9,10 +9,10 @@ function registerGenderHandlers(bot) {
   // /setgender — user set gender dirinya sendiri
   bot.command('setgender', async (ctx) => {
     return ctx.reply(
-      '👤 Pilih gender kamu:',
+      'Pilih gender kamu:',
       Markup.inlineKeyboard([
-        [Markup.button.callback('🙍‍♂️ Laki-laki', 'setgender:m')],
-        [Markup.button.callback('🙍‍♀️ Perempuan', 'setgender:f')],
+        [Markup.button.callback('Cowok', 'setgender:m')],
+        [Markup.button.callback('Cewek', 'setgender:f')],
       ])
     );
   });
@@ -29,11 +29,11 @@ function registerGenderHandlers(bot) {
       );
       await redis.set(`user:${telegramId}:gender`, gender);
 
-      const label = gender === 'm' ? 'Laki-laki 🙍‍♂️' : 'Perempuan 🙍‍♀️';
-      await ctx.editMessageText(`✅ Gender profil disetel ke: *${label}*\n\nKetik /start untuk mulai mencari teman chat.`, { parse_mode: 'Markdown' });
+      const label = gender === 'm' ? 'Cowok' : 'Cewek';
+      await ctx.editMessageText(`Gender kamu: *${label}*\n\nKetik /start buat mulai ngobrol.`, { parse_mode: 'Markdown' });
     } catch (err) {
       console.error('/setgender error:', err);
-      await ctx.reply('❌ Gagal menyimpan gender. Coba lagi.');
+      await ctx.reply('Gagal simpan gender. Coba lagi.');
     }
   });
 
@@ -46,22 +46,22 @@ function registerGenderHandlers(bot) {
 
       if (!user?.isPremium || !user?.premiumExpiry || user.premiumExpiry < new Date()) {
         return ctx.reply(
-          '⭐ Fitur ini khusus untuk pengguna *Premium*.\n\nKetik /upgrade untuk berlangganan.',
+          'Fitur ini cuma buat user Premium.\n\nKetik /upgrade buat langganan.',
           { parse_mode: 'Markdown' }
         );
       }
 
       return ctx.reply(
-        '🔍 Pilih gender partner yang kamu cari:',
+        'Mau ngobrol sama siapa?',
         Markup.inlineKeyboard([
-          [Markup.button.callback('🙍‍♂️ Laki-laki', 'filtergender:m')],
-          [Markup.button.callback('🙍‍♀️ Perempuan', 'filtergender:f')],
-          [Markup.button.callback('🎲 Random (hapus filter)', 'filtergender:any')],
+          [Markup.button.callback('Cowok', 'filtergender:m')],
+          [Markup.button.callback('Cewek', 'filtergender:f')],
+          [Markup.button.callback('Random aja', 'filtergender:any')],
         ])
       );
     } catch (err) {
       console.error('/filtergender error:', err);
-      await ctx.reply('❌ Terjadi kesalahan. Coba lagi.');
+      await ctx.reply('Ada gangguan. Coba lagi.');
     }
   });
 
@@ -73,18 +73,18 @@ function registerGenderHandlers(bot) {
     try {
       if (pref === 'any') {
         await redis.del(`user:${telegramId}:pref`);
-        await ctx.editMessageText('🎲 Filter dihapus. Pencarian partner sekarang acak/random.');
+        await ctx.editMessageText('Filter dihapus. Pencarian sekarang random.');
       } else {
         await redis.set(`user:${telegramId}:pref`, pref, 'EX', TTL);
-        const label = pref === 'm' ? 'Laki-laki 🙍‍♂️' : 'Perempuan 🙍‍♀️';
+        const label = pref === 'm' ? 'Cowok' : 'Cewek';
         await ctx.editMessageText(
-          `✅ Filter aktif: mencari partner *${label}*.\n\nKetik /start atau /next untuk mulai.`,
+          `Filter aktif: nyari partner *${label}*.\n\nKetik /start atau /next buat mulai.`,
           { parse_mode: 'Markdown' }
         );
       }
     } catch (err) {
       console.error('/filtergender action error:', err);
-      await ctx.reply('❌ Gagal menyimpan preferensi. Coba lagi.');
+      await ctx.reply('Gagal simpan preferensi. Coba lagi.');
     }
   });
 }

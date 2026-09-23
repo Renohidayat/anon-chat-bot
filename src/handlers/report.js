@@ -21,7 +21,7 @@ function registerReportHandlers(bot) {
       if (!reportedId) {
         const lastPartner = await redis.get(RECENT_SESSION_KEY(telegramId));
         if (!lastPartner) {
-          return ctx.reply('❌ Tidak ada partner yang bisa dilaporkan. Fitur ini hanya bisa digunakan saat chatting atau dalam 5 menit setelah sesi berakhir.');
+          return ctx.reply('Nggak ada partner yang bisa dilaporkan. Kamu cuma bisa lapor pas lagi ngobrol atau 5 menit setelah obrolan selesai.');
         }
         reportedId = Number(lastPartner);
       }
@@ -30,12 +30,12 @@ function registerReportHandlers(bot) {
       await redis.set(`user:${telegramId}:reporting`, String(reportedId), 'EX', 120);
 
       await ctx.reply(
-        '⚠️ Kamu akan melaporkan partner ini.\n\nTulis alasan singkat laporanmu (atau ketik /cancel untuk batal):'
+        'Kamu mau lapor partner ini.\n\nTulis alasan singkat (atau ketik /cancel buat batal):'
       );
 
     } catch (err) {
       console.error('/report error:', err);
-      await ctx.reply('❌ Terjadi kesalahan. Coba lagi.');
+      await ctx.reply('Ada gangguan. Coba lagi.');
     }
   });
 
@@ -67,10 +67,10 @@ function registerReportHandlers(bot) {
         createdAt: new Date(),
       });
 
-      await ctx.reply('✅ Laporan berhasil dikirim. Terima kasih, tim kami akan meninjau laporan ini.');
+      await ctx.reply('Laporan terkirim. Makasih, tim kami bakal review.');
     } catch (err) {
       console.error('Report submission error:', err);
-      await ctx.reply('❌ Gagal mengirim laporan. Coba lagi.');
+      await ctx.reply('Gagal kirim laporan. Coba lagi.');
     }
   });
 
@@ -88,7 +88,7 @@ function registerReportHandlers(bot) {
         .toArray();
 
       if (list.length === 0) {
-        return ctx.reply('✅ Tidak ada laporan yang belum diulas.');
+        return ctx.reply('Nggak ada laporan yang perlu direview.');
       }
 
       const text = list.map((r, i) => {
@@ -96,21 +96,20 @@ function registerReportHandlers(bot) {
         return `${i + 1}. ID: \`${r._id}\`\n   Reporter: ${r.reporterTelegramId}\n   Reported: ${r.reportedTelegramId}\n   Alasan: ${r.reason}\n   Tanggal: ${date}`;
       }).join('\n\n');
 
-      await ctx.reply(`📋 *Laporan Pending (${list.length}):*\n\n${text}`, { parse_mode: 'Markdown' });
+      await ctx.reply(`*Laporan Pending (${list.length}):*\n\n${text}`, { parse_mode: 'Markdown' });
     } catch (err) {
       console.error('/reports error:', err);
-      await ctx.reply('❌ Gagal mengambil daftar laporan.');
+      await ctx.reply('Gagal ambil daftar laporan.');
     }
   });
 
   // /review <reportId> <dismiss|warn|ban> — tindak laporan (admin only)
-  // Contoh: /review 64a1b2c3d4e5f6g7 ban
   bot.command('review', async (ctx) => {
     if (!isAdmin(ctx.from.id)) return;
 
     const args = ctx.message.text.split(' ').slice(1);
     if (args.length < 2) {
-      return ctx.reply('Usage: /review <reportId> <dismiss|warn|ban>');
+      return ctx.reply('Format: /review <reportId> <dismiss|warn|ban>');
     }
 
     const [reportId, action] = args;
@@ -133,7 +132,7 @@ function registerReportHandlers(bot) {
       );
 
       if (!report) {
-        return ctx.reply('❌ Report tidak ditemukan.');
+        return ctx.reply('Report nggak ditemukan.');
       }
 
       if (action === 'ban') {
@@ -145,14 +144,14 @@ function registerReportHandlers(bot) {
         // Beri tahu user yang di-ban
         await bot.telegram.sendMessage(
           report.reportedTelegramId,
-          '⛔ Akun kamu telah diblokir oleh admin karena melanggar aturan.'
+          'Akun kamu diblokir oleh admin karena melanggar aturan.'
         ).catch(() => {});
       }
 
-      await ctx.reply(`✅ Report \`${reportId}\` ditandai sebagai *${action}*.`, { parse_mode: 'Markdown' });
+      await ctx.reply(`Report \`${reportId}\` ditandai sebagai *${action}*.`, { parse_mode: 'Markdown' });
     } catch (err) {
       console.error('/review error:', err);
-      await ctx.reply('❌ Gagal memproses review. Pastikan reportId valid.');
+      await ctx.reply('Gagal proses review. Pastikan reportId valid.');
     }
   });
 }
