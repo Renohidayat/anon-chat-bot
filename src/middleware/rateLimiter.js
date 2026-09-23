@@ -16,8 +16,10 @@ const BLOCK_KEY = (id) => `ratelimit:blocked:${id}`;
  * anti-spam pesan. Upgrade path: sliding window dengan Redis ZADD.
  */
 async function rateLimiter(ctx, next) {
-  // Hanya rate-limit pesan biasa, bukan command
-  const isRegularMessage = ctx.message && !ctx.message.text?.startsWith('/');
+  // Skip command dan callback query — jangan rate-limit interaksi UI
+  if (ctx.message?.text?.startsWith('/') || ctx.callbackQuery) return next();
+
+  const isRegularMessage = ctx.message;
   if (!isRegularMessage) return next();
 
   const userId = ctx.from?.id;
@@ -27,7 +29,7 @@ async function rateLimiter(ctx, next) {
     // Cek apakah sedang di-block
     const blocked = await redis.get(BLOCK_KEY(userId));
     if (blocked) {
-      return ctx.reply('⏳ Kamu mengirim pesan terlalu cepat. Tunggu sebentar.').catch(() => {});
+      return ctx.reply('Pelan-pelan, kamu ngirim pesan terlalu cepat.').catch(() => {});
     }
 
     // Increment counter
@@ -38,7 +40,7 @@ async function rateLimiter(ctx, next) {
 
     if (count > MAX_MESSAGES) {
       await redis.set(BLOCK_KEY(userId), '1', 'EX', BLOCK_SEC);
-      return ctx.reply('⚠️ Terlalu banyak pesan. Tunggu 10 detik.').catch(() => {});
+      return ctx.reply('Kebanyakan pesan. Tunggu 10 detik ya.').catch(() => {});
     }
   } catch (err) {
     // Jangan block user kalau Redis error
