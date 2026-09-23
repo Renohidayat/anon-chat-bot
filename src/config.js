@@ -8,6 +8,11 @@ for (const key of required) {
   }
 }
 
+// RonzzPay required only when payment feature is used
+if (process.env.RONZZPAY_API_KEY && !process.env.RONZZPAY_WEBHOOK_URL) {
+  console.warn('Warning: RONZZPAY_API_KEY set but RONZZPAY_WEBHOOK_URL missing — webhook fallback polling will be used');
+}
+
 module.exports = {
   BOT_TOKEN: process.env.BOT_TOKEN,
   MONGODB_URI: process.env.MONGODB_URI,
@@ -16,4 +21,8 @@ module.exports = {
   PREMIUM_PRICE: Number(process.env.PREMIUM_PRICE) || 10000,
   PREMIUM_DURATION_DAYS: Number(process.env.PREMIUM_DURATION_DAYS) || 30,
   PORT: Number(process.env.PORT) || 3000,
+  RONZZPAY_API_KEY: process.env.RONZZPAY_API_KEY || '',
+  RONZZPAY_BASE_URL: process.env.RONZZPAY_BASE_URL || 'https://pg.ronzzyt.id',
+  RONZZPAY_WEBHOOK_URL: process.env.RONZZPAY_WEBHOOK_URL || '',
+  PAYMENT_MODE: process.env.PAYMENT_MODE || 'sandbox',
 };
