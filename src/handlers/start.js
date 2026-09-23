@@ -46,7 +46,7 @@ function registerStartHandlers(bot) {
         await ctx.telegram.sendMessage(partnerId, msg);
       } else {
         await matching.enqueue(telegramId);
-        await ctx.reply('🔍 Mencari partner... Tunggu sebentar ya.');
+        await ctx.reply('⏳ Sedang mencari partner...');
       }
     } catch (err) {
       console.error('/start error:', err);
@@ -106,13 +106,14 @@ function registerStartHandlers(bot) {
         await ctx.telegram.sendMessage(partnerId, msg);
       } else {
         await matching.enqueue(telegramId);
-        await ctx.reply('🔍 Mencari partner... Tunggu sebentar ya.');
+        await ctx.reply('⏳ Sedang mencari partner...');
       }
     } catch (err) {
       console.error('/next error:', err);
       await ctx.reply('❌ Terjadi kesalahan. Coba lagi nanti.');
     }
   });
+
 }
 
 module.exports = { registerStartHandlers };

@@ -144,4 +144,5 @@ module.exports = {
   findAndPair,
   unpair,
   dequeue,
+  pair,
 };
