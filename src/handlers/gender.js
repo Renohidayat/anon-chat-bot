@@ -30,10 +30,25 @@ function registerGenderHandlers(bot) {
       await redis.set(`user:${telegramId}:gender`, gender);
 
       const label = gender === 'm' ? 'Cowok' : 'Cewek';
-      await ctx.editMessageText(`Gender kamu: *${label}*\n\nKetik /start buat mulai ngobrol.`, { parse_mode: 'Markdown' });
+      const user = await users().findOne({ telegramId });
+      
+      if (!user?.age) {
+        // Trigger prompt umur
+        const AGE_AWAITING_KEY = (id) => `user:${id}:awaiting_age`;
+        await redis.set(AGE_AWAITING_KEY(telegramId), '1', 'EX', 120);
+        await ctx.editMessageText(`Gender kamu: *${label}*\n\nLangkah terakhir: ketik umur kamu (angka 13-99):`, { parse_mode: 'Markdown' }).catch(e => {
+          if (!e.message.includes('message is not modified')) throw e;
+        });
+      } else {
+        await ctx.editMessageText(`Gender kamu: *${label}*\n\nKetik /start buat mulai ngobrol.`, { parse_mode: 'Markdown' }).catch(e => {
+          if (!e.message.includes('message is not modified')) throw e;
+        });
+      }
     } catch (err) {
-      console.error('/setgender error:', err);
-      await ctx.reply('Gagal simpan gender. Coba lagi.');
+      if (!err.message.includes('message is not modified')) {
+        console.error('/setgender error:', err);
+        await ctx.reply('Gagal simpan gender. Coba lagi.');
+      }
     }
   });
 
@@ -80,11 +95,15 @@ function registerGenderHandlers(bot) {
         await ctx.editMessageText(
           `Filter aktif: nyari partner *${label}*.\n\nKetik /start atau /next buat mulai.`,
           { parse_mode: 'Markdown' }
-        );
+        ).catch(e => {
+          if (!e.message.includes('message is not modified')) throw e;
+        });
       }
     } catch (err) {
-      console.error('/filtergender action error:', err);
-      await ctx.reply('Gagal simpan preferensi. Coba lagi.');
+      if (!err.message.includes('message is not modified')) {
+        console.error('/filtergender action error:', err);
+        await ctx.reply('Gagal simpan preferensi. Coba lagi.');
+      }
     }
   });
 }
