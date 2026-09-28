@@ -103,6 +103,38 @@ function registerPremiumHandlers(bot) {
     await ctx.answerCbQuery('Dibatalkan.');
     await ctx.editMessageCaption('Transaksi dibatalkan.').catch(() => {});
   });
+
+  // Admin command: /unpremium <telegramId>
+  bot.command('unpremium', async (ctx) => {
+    const telegramId = ctx.from.id;
+    if (!config.ADMIN_IDS.includes(telegramId)) return;
+
+    const args = ctx.message.text.split(' ');
+    if (args.length !== 2) {
+      return ctx.reply('Format salah. Gunakan: /unpremium <telegramId>');
+    }
+
+    const targetId = Number(args[1]);
+    if (isNaN(targetId)) {
+      return ctx.reply('ID pengguna harus berupa angka.');
+    }
+
+    try {
+      const result = await users().updateOne(
+        { telegramId: targetId },
+        { $set: { isPremium: false, premiumExpiry: null, updatedAt: new Date() } }
+      );
+
+      if (result.matchedCount === 0) {
+        return ctx.reply(`Pengguna dengan ID ${targetId} tidak ditemukan.`);
+      }
+
+      await ctx.reply(`Premium untuk pengguna ${targetId} telah dicabut.`);
+    } catch (err) {
+      console.error('/unpremium error:', err);
+      await ctx.reply('Terjadi kesalahan saat memproses perintah.');
+    }
+  });
 }
 
 /**
