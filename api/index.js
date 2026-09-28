@@ -13,12 +13,12 @@ const webhookRouter = require('../src/services/webhook');
 const { setBot } = require('../src/services/webhook');
 const { rateLimiter } = require('../src/middleware/rateLimiter');
 
-// Initialize Telegraf
-const bot = new Telegraf(config.BOT_TOKEN);
+// Initialize Telegraf — webhookReply: false agar Vercel tidak mati sebelum semua operasi selesai
+const bot = new Telegraf(config.BOT_TOKEN, { telegram: { webhookReply: false } });
 
 bot.catch((err, ctx) => {
   console.error(`Bot error for update ${ctx.updateType}:`, err.message);
-  ctx.reply('❌ Terjadi kesalahan. Coba lagi nanti.').catch(() => {});
+  ctx.reply('Ada gangguan. Coba lagi ya.').catch(() => {});
 });
 
 bot.use(rateLimiter);

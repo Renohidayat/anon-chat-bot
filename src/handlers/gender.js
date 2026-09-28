@@ -18,8 +18,8 @@ function registerGenderHandlers(bot) {
   });
 
   bot.action(/^setgender:(m|f)$/, async (ctx) => {
-    // answerCbQuery NON-BLOCKING — jangan await, biar Telegram langsung hilangkan loading indicator
-    ctx.answerCbQuery().catch(() => {});
+    // answerCbQuery untuk hilangkan loading indicator di Telegram
+    await ctx.answerCbQuery().catch(() => {});
     const gender = ctx.match[1];
     const telegramId = ctx.from.id;
     const label = gender === 'm' ? 'Cowok' : 'Cewek';
