@@ -22,26 +22,28 @@ async function rateLimiter(ctx, next) {
   const userId = ctx.from?.id;
   if (!userId) return next();
 
+  // Callback query yang aman — langsung lewat tanpa cek Redis (hindari cold-start delay)
+  if (ctx.callbackQuery) {
+    const data = ctx.callbackQuery.data || '';
+    // Captcha, gender, filter, settings, start_search — semua aman
+    if (data.startsWith('captcha:') || data.startsWith('setgender:') || data.startsWith('filtergender:') || data.startsWith('settings:') || data === 'start_search') {
+      return next();
+    }
+  }
+
+  // Command juga langsung lewat tanpa rate limit
+  if (ctx.message?.text?.startsWith('/')) return next();
+
+  const isRegularMessage = ctx.message;
+  if (!isRegularMessage) return next();
+
   try {
     // Cek apakah sedang di-block karena belum jawab captcha
     const blocked = await redis.get(BLOCK_KEY(userId));
     if (blocked) {
-      // Jika mencoba aksi lain saat diblokir, ingatkan (kecuali jawab captcha)
-      if (ctx.message?.text?.startsWith('/') || (ctx.callbackQuery && !ctx.callbackQuery.data?.startsWith('captcha:'))) {
-        return ctx.reply('Kamu masih diblokir karena spam. Selesaikan pertanyaan matematika sebelumnya dulu.').catch(() => {});
-      }
-      
-      // Biarkan callback captcha lolos, abaikan yang lain
-      if (!(ctx.callbackQuery && ctx.callbackQuery.data?.startsWith('captcha:'))) {
-        return;
-      }
+      return; // Abaikan pesan dari spammer yang belum verifikasi
     }
 
-    // Skip command dan callback query untuk rate limiting penambahan counter
-    if (ctx.message?.text?.startsWith('/') || ctx.callbackQuery) return next();
-
-    const isRegularMessage = ctx.message;
-    if (!isRegularMessage) return next();
 
     // Increment counter
     const count = await redis.incr(RATE_KEY(userId));

@@ -18,22 +18,21 @@ function registerGenderHandlers(bot) {
   });
 
   bot.action(/^setgender:(m|f)$/, async (ctx) => {
-    await ctx.answerCbQuery();
+    // answerCbQuery NON-BLOCKING — jangan await, biar Telegram langsung hilangkan loading indicator
+    ctx.answerCbQuery().catch(() => {});
     const gender = ctx.match[1];
     const telegramId = ctx.from.id;
+    const label = gender === 'm' ? 'Cowok' : 'Cewek';
 
     try {
-      await users().updateOne(
-        { telegramId },
-        { $set: { gender, updatedAt: new Date() } }
-      );
-      await redis.set(`user:${telegramId}:gender`, gender);
+      // Paralel: simpan gender ke MongoDB + Redis sekaligus
+      const [, , user] = await Promise.all([
+        users().updateOne({ telegramId }, { $set: { gender, updatedAt: new Date() } }),
+        redis.set(`user:${telegramId}:gender`, gender),
+        users().findOne({ telegramId }),
+      ]);
 
-      const label = gender === 'm' ? 'Cowok' : 'Cewek';
-      const user = await users().findOne({ telegramId });
-      
       if (!user?.age) {
-        // Trigger prompt umur
         const AGE_AWAITING_KEY = (id) => `user:${id}:awaiting_age`;
         await redis.set(AGE_AWAITING_KEY(telegramId), '1', 'EX', 120);
         await ctx.editMessageText(`Gender kamu: *${label}*\n\nLangkah terakhir: ketik umur kamu (angka 13-99):`, { parse_mode: 'Markdown' }).catch(e => {
@@ -45,7 +44,7 @@ function registerGenderHandlers(bot) {
         });
       }
     } catch (err) {
-      if (!err.message.includes('message is not modified')) {
+      if (!err.message?.includes('message is not modified')) {
         console.error('/setgender error:', err);
         await ctx.reply('Gagal simpan gender. Coba lagi.');
       }
