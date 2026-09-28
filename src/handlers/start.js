@@ -5,6 +5,7 @@ const { saveLastPartner } = require('./report');
 const redis = require('../db/redis');
 
 const { generateCaptcha } = require('../utils/captcha');
+const config = require('../config');
 
 function registerStartHandlers(bot) {
   // Captcha callback handler
@@ -132,7 +133,19 @@ function registerStartHandlers(bot) {
       if (status === 'chatting') {
         const partnerId = await matching.unpair(telegramId);
         await saveLastPartner(telegramId, partnerId);
-        await ctx.reply('Obrolan selesai. Mau cari lagi? Ketik /start');
+        
+        // Cek apakah user sudah premium
+        const user = await users().findOne({ telegramId });
+        const isPremium = user?.isPremium && user?.premiumExpiry > new Date();
+        
+        if (!isPremium) {
+          await ctx.reply(
+            'Obrolan selesai.\n\nBosen dapet partner yang nggak sesuai? Upgrade ke *Premium* buat pilih mau ngobrol sama cowok atau cewek.\n\nKetik /start buat cari lagi, /upgrade buat Premium.',
+            { parse_mode: 'Markdown' }
+          );
+        } else {
+          await ctx.reply('Obrolan selesai. Mau cari lagi? Ketik /start');
+        }
         if (partnerId) {
           await ctx.telegram.sendMessage(partnerId, 'Partner kamu udah pergi. Ketik /start buat cari temen baru.');
         }
@@ -176,6 +189,33 @@ function registerStartHandlers(bot) {
       console.error('/next error:', err);
       await ctx.reply('Waduh, ada gangguan. Coba lagi ya.');
     }
+  });
+
+  // Callback promo_upgrade — trigger /upgrade command
+  bot.action('promo_upgrade', async (ctx) => {
+    await ctx.answerCbQuery().catch(() => {});
+    if (!config.RONZZPAY_API_KEY) {
+      return ctx.reply('Fitur premium belum tersedia saat ini.');
+    }
+    const telegramId = ctx.from.id;
+    const user = await users().findOne({ telegramId });
+    if (user?.isPremium && user?.premiumExpiry > new Date()) {
+      return ctx.reply(`Kamu udah Premium! Santai aja.`);
+    }
+    await ctx.reply(
+      [
+        '💎 *Premium Member*',
+        '',
+        'Keuntungan:',
+        '• Pilih gender partner (cowok/cewek)',
+        '• Prioritas antrean — dapet partner lebih cepat',
+        '',
+        `Harga: *Rp${config.PREMIUM_PRICE.toLocaleString('id-ID')}*/bulan`,
+        '',
+        'Ketik /upgrade buat mulai!',
+      ].join('\n'),
+      { parse_mode: 'Markdown' }
+    );
   });
 
 }

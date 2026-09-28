@@ -1,6 +1,7 @@
 const { Markup } = require('telegraf');
 const { users } = require('../db/mongo');
 const redis = require('../db/redis');
+const config = require('../config');
 
 const AGE_AWAITING_KEY = (id) => `user:${id}:awaiting_age`;
 
@@ -80,10 +81,24 @@ function registerSettingsHandlers(bot) {
         { telegramId },
         { $set: { age, updatedAt: new Date() } }
       );
-      await ctx.reply(`Umur kamu disimpan: *${age} tahun*.\n\nSemua profil sudah lengkap!`, { 
+      const promoText = [
+        `Umur kamu disimpan: *${age} tahun*`,
+        '',
+        'Profil kamu udah lengkap! Langsung cari temen ngobrol yuk.',
+        '',
+        '💎 *Tau nggak?* Dengan Premium kamu bisa:',
+        '• Pilih mau ngobrol sama cowok atau cewek',
+        '• Lebih cepat dapet partner',
+        `• Cuma *Rp${config.PREMIUM_PRICE.toLocaleString('id-ID')}*/bulan`,
+        '',
+        'Murah banget kan? Ketik /upgrade kapan aja.',
+      ].join('\n');
+
+      await ctx.reply(promoText, { 
         parse_mode: 'Markdown',
         ...Markup.inlineKeyboard([
-          [Markup.button.callback('Cari Partner 🔍', 'start_search')]
+          [Markup.button.callback('Cari Partner 🔍', 'start_search')],
+          [Markup.button.callback('Upgrade Premium 💎', 'promo_upgrade')],
         ])
       });
     } catch (err) {

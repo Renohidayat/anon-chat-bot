@@ -26,7 +26,7 @@ async function rateLimiter(ctx, next) {
   if (ctx.callbackQuery) {
     const data = ctx.callbackQuery.data || '';
     // Captcha, gender, filter, settings, start_search — semua aman
-    if (data.startsWith('captcha:') || data.startsWith('setgender:') || data.startsWith('filtergender:') || data.startsWith('settings:') || data === 'start_search') {
+    if (data.startsWith('captcha:') || data.startsWith('setgender:') || data.startsWith('filtergender:') || data.startsWith('settings:') || data.startsWith('check_payment:') || data === 'start_search' || data === 'promo_upgrade') {
       return next();
     }
   }
